@@ -191,14 +191,14 @@
             [session setActive:YES error:nil];
         
         
-        [self.audioRecorder record];
         
         self.timer = [NSTimer scheduledTimerWithTimeInterval:1.0
                                                       target:self
                                                     selector:@selector(record)
                                                     userInfo:nil
                                                      repeats:YES];
-        
+        [self.audioRecorder record];
+
          NSLog(@"录音开始");
         
 #if ENCODE_MP3
