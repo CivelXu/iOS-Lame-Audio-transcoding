@@ -11,7 +11,6 @@
 
 @interface ConvertAudioFile ()
 @property (nonatomic, assign) BOOL stopRecord;
-@property (nonatomic, assign) BOOL isSleep;
 @end
 
 @implementation ConvertAudioFile
@@ -44,12 +43,12 @@
                            callback:(void(^)(BOOL result))callback
 {
     
-        NSLog(@"convert begin!!");
+    NSLog(@"convert begin!!");
     __weak typeof(self) weakself = self;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-
+        
         weakself.stopRecord = NO;
-    
+        
         @try {
             
             int read, write;
@@ -69,6 +68,7 @@
             
             long curpos;
             BOOL isSkipPCMHeader = NO;
+            BOOL finish = NO;
             
             do {
                 curpos = ftell(pcm);
@@ -92,20 +92,30 @@
                     write = lame_encode_buffer_interleaved(lame, pcm_buffer, read, mp3_buffer, MP3_SIZE);
                     fwrite(mp3_buffer, write, 1, mp3);
                     NSLog(@"read %d bytes", write);
-                    weakself.isSleep = NO;
-                } else {
-                    weakself.isSleep = YES;
+                }
+                // 停止录音时 length 不够 PCM_SIZE * 2 导致漏转的问题
+                else if (weakself.stopRecord && length) {
+                    read = (int)fread(pcm_buffer, 2*sizeof(short int), PCM_SIZE, pcm);
+                    if (read == 0) {
+                        write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
+                    } else {
+                        write = lame_encode_buffer_interleaved(lame, pcm_buffer, read, mp3_buffer, MP3_SIZE);
+                    }
+                    fwrite(mp3_buffer, write, 1, mp3);
+                    finish = YES;
+                }
+                else {
+                    [NSThread sleepForTimeInterval:0.05];
                     NSLog(@"sleep");
                 }
-                
-            } while (!weakself.stopRecord || !weakself.isSleep);
+            } while (!finish);
             
             read = (int)fread(pcm_buffer, 2 * sizeof(short int), PCM_SIZE, pcm);
             write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
-
+            
             NSLog(@"read %d bytes and flush to mp3 file", write);
             lame_mp3_tags_fid(lame, mp3);
-
+            
             lame_close(lame);
             fclose(mp3);
             fclose(pcm);
@@ -123,7 +133,7 @@
             NSLog(@"convert mp3 finish!!! %@", mp3FilePath);
         }
     });
-
+    
 }
 
 /**
@@ -170,18 +180,18 @@
                 
                 read = (int)fread(pcm_buffer, 2*sizeof(short int), PCM_SIZE, pcm);
                 if (read == 0) {
-                write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
-
+                    write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
+                    
                 } else {
                     write = lame_encode_buffer_interleaved(lame, pcm_buffer, read, mp3_buffer, MP3_SIZE);
                 }
                 
                 fwrite(mp3_buffer, write, 1, mp3);
-
+                
             } while (read != 0);
-
+            
             lame_mp3_tags_fid(lame, mp3);
-
+            
             lame_close(lame);
             fclose(mp3);
             fclose(pcm);
@@ -202,3 +212,4 @@
 }
 
 @end
+
