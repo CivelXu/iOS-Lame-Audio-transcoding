@@ -99,6 +99,7 @@
             } while (! weakself.stopRecord);
             
             read = (int)fread(pcm_buffer, 2 * sizeof(short int), PCM_SIZE, pcm);
+            fwrite(mp3_buffer, write, 1, mp3);
             write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
 
             NSLog(@"read %d bytes and flush to mp3 file", write);
