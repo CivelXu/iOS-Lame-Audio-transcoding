@@ -11,6 +11,7 @@
 
 @interface ConvertAudioFile ()
 @property (nonatomic, assign) BOOL stopRecord;
+@property (nonatomic, assign) BOOL isSleep;
 @end
 
 @implementation ConvertAudioFile
@@ -91,15 +92,16 @@
                     write = lame_encode_buffer_interleaved(lame, pcm_buffer, read, mp3_buffer, MP3_SIZE);
                     fwrite(mp3_buffer, write, 1, mp3);
                     NSLog(@"read %d bytes", write);
+                    weakself.isSleep = NO;
                 } else {
+                    weakself.isSleep = YES;
                     [NSThread sleepForTimeInterval:0.05];
                     NSLog(@"sleep");
                 }
                 
-            } while (! weakself.stopRecord);
+            } while (!weakself.stopRecord || !weakself.isSleep);
             
             read = (int)fread(pcm_buffer, 2 * sizeof(short int), PCM_SIZE, pcm);
-            fwrite(mp3_buffer, write, 1, mp3);
             write = lame_encode_flush(lame, mp3_buffer, MP3_SIZE);
 
             NSLog(@"read %d bytes and flush to mp3 file", write);
