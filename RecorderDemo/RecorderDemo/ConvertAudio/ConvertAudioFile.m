@@ -95,7 +95,6 @@
                     weakself.isSleep = NO;
                 } else {
                     weakself.isSleep = YES;
-                    [NSThread sleepForTimeInterval:0.05];
                     NSLog(@"sleep");
                 }
                 
